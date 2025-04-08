@@ -1,6 +1,6 @@
-from jinja2 import Template, Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader
 from mcp.types import Tool
-from conversation import conversation_server
+from mcp_agent_server.conversation import conversation_server
 
 # Getting the System Prompt Template
 def load_system_prompt(**kwargs) -> str:

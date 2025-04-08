@@ -3,7 +3,7 @@ from typing import List, Dict, Any, Tuple
 from enum import Enum
 from mcp.types import Tool
 from openai import OpenAI
-from prompts.prompt_utils import build_meta_thinking_prompts
+from mcp_agent_server.prompts.prompt_utils import build_meta_thinking_prompts
 
 client = OpenAI()
 
