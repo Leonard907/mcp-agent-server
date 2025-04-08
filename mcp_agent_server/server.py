@@ -7,6 +7,8 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent, ImageContent, EmbeddedResource
 from mcp.shared.exceptions import McpError
+from conversation import conversation_server
+from utils import *
 
 async def serve() -> None:
     server = Server("mcp-agent-server")
@@ -24,7 +26,7 @@ async def serve() -> None:
         result = ""
         try:
             match name:
-                case ConversationTools.SET_CONV_HISTORY.value:
+                case "set_conv_history":
                     conversation = arguments.get("conversation")
                     if not conversation:
                         raise ValueError("Missing required argument: conversation")

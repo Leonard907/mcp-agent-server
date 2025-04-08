@@ -12,4 +12,4 @@ dependencies = [
 ]
 
 [project.scripts]
-mcp-agent-server = "src:main"
+mcp-agent-server = "mcp_agent_server:main"
