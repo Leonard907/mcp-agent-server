@@ -6,7 +6,7 @@ authors = [
     { name="Litu Ou", email="lituou907@gmail.com" }
 ]
 readme = "README.md"
-requires-python = "3.11"
+requires-python = ">=3.11"
 
 [project.scripts]
 mcp-agent-server = "mcp_agent_server:main"
