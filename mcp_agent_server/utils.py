@@ -4,8 +4,12 @@ from enum import Enum
 from mcp.types import Tool
 from openai import OpenAI
 from mcp_agent_server.prompts.prompt_utils import build_meta_thinking_prompts
+import os
+from dotenv import load_dotenv
 
-client = OpenAI()
+load_dotenv()
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url=os.getenv("OPENAI_API_BASE"))
 
 # Handling Conversation History for Tool Calling
 class ConversationTools(Enum):
@@ -97,7 +101,7 @@ def get_all_tools() -> Tuple[List[Tool], List[str], List[str]]:
 def process_meta_thinking_tool(name: str, arguments: dict, tool: Tool) -> str:
     system_prompt, user_prompt = build_meta_thinking_prompts(arguments, tool)
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=os.getenv("MODEL_NAME"),
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
