@@ -4,7 +4,6 @@ from mcp_agent_server.utils import *
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent, ImageContent, EmbeddedResource
-from mcp_agent_server.conversation import conversation_server
 
 async def serve() -> None:
     server = Server("mcp-agent-server")
@@ -21,16 +20,7 @@ async def serve() -> None:
         """Handle tool calls for time queries and conversation history."""
         result = ""
         try:
-            match name:
-                case "set_conv_history":
-                    conversation = arguments.get("conversation")
-                    if not conversation:
-                        raise ValueError("Missing required argument: conversation")
-                    
-                    result = conversation_server.set_conversation_history(conversation)
-                
-                case _:
-                    result = execute_tool(name, arguments)
+            result = execute_tool(name, arguments)
 
             return [
                 TextContent(type="text", text=result)

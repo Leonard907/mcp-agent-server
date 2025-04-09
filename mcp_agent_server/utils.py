@@ -3,7 +3,8 @@ from typing import List, Dict, Any, Tuple
 from enum import Enum
 from mcp.types import Tool
 from openai import OpenAI
-from mcp_agent_server.prompts.prompt_utils import build_meta_thinking_prompts
+from mcp_agent_server.prompts.prompt_utils import build_meta_thinking_prompts, build_conversation_prompts
+from mcp_agent_server.conversation import conversation_server
 import os
 from dotenv import load_dotenv
 
@@ -11,19 +12,25 @@ load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url=os.getenv("OPENAI_API_BASE"))
 
-# Handling Conversation History for Tool Calling
-class ConversationTools(Enum):
-    SET_CONV_HISTORY = "set_conv_history"
-
 # Handling General Tool Calling using LLMs
 def parse_tools(file_path: str = "data/meta_thinking.md") -> List[Tool]:
     try:
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(current_dir, file_path)
-        with open(file_path, 'r') as file:
+        # Handle absolute paths
+        if os.path.isabs(file_path):
+            full_path = file_path
+        else:
+            # For relative paths, join with the current directory
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            # Check if the file_path starts with the package name, if so remove it from the path
+            if file_path.startswith("mcp_agent_server/"):
+                file_path = file_path[len("mcp_agent_server/"):]
+            full_path = os.path.join(current_dir, file_path)
+        
+        with open(full_path, 'r') as file:
             content = file.read()
     except FileNotFoundError:
-        raise FileNotFoundError(f"Meta thinking file not found at: {file_path}. Current directory: {current_dir}")
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        raise FileNotFoundError(f"Meta thinking file not found at: {full_path}. Current directory: {current_dir}")
     
     # Split content by tool definitions (each starts with "Name:")
     tool_sections = re.split(r'(?=Name:)', content)
@@ -58,13 +65,21 @@ def parse_tools(file_path: str = "data/meta_thinking.md") -> List[Tool]:
                     
                     # Extract param type if it exists in the description
                     param_type = "string"  # Default type
+                    param_data = {"description": param_desc}
+                    
                     if "boolean" in param_desc:
                         param_type = "boolean"
                     
-                    params[param_name] = {
-                        "type": param_type,
-                        "description": param_desc
-                    }
+                    # Check for Enum type
+                    enum_match = re.search(r'Enum\[(.*?)\]', param_desc)
+                    if enum_match:
+                        param_type = "string"
+                        # Extract enum values
+                        enum_values = [val.strip() for val in enum_match.group(1).split(',')]
+                        param_data["enum"] = enum_values
+                    
+                    param_data["type"] = param_type
+                    params[param_name] = param_data
             
             # Check for required parameters
             required_match = re.search(r'Required:\s*(.+?)(?=\n\w+:|$)', section, re.DOTALL)
@@ -86,18 +101,24 @@ def parse_tools(file_path: str = "data/meta_thinking.md") -> List[Tool]:
     
     return tools
 
-def get_all_tools() -> Tuple[List[Tool], List[str], List[str]]:
+def get_all_tools() -> Tuple[List[Tool], Dict[str, Tool], Dict[str, Tool], Dict[str, Tool]]:
     meta_thinking_tools = parse_tools(file_path="data/meta_thinking.md")
     problem_solving_tools = parse_tools(file_path="data/problem_solving.md") 
     conversation_tools = parse_tools(file_path="data/conversation_tools.md")
     
     meta_thinking_names_dict = {tool.name: tool for tool in meta_thinking_tools}
     problem_solving_names_dict = {tool.name: tool for tool in problem_solving_tools}
-    
+    conversation_names_dict = {tool.name: tool for tool in conversation_tools}
+
+    all_tools = meta_thinking_tools + problem_solving_tools + [
+        tool for tool in conversation_tools if tool.name != "set_conv_history"
+    ]
+
     return (
-        meta_thinking_tools + problem_solving_tools + conversation_tools,
+        conversation_tools,
         meta_thinking_names_dict,
         problem_solving_names_dict,
+        conversation_names_dict
     )
 
 def process_meta_thinking_tool(name: str, arguments: dict, tool: Tool) -> str:
@@ -111,14 +132,32 @@ def process_meta_thinking_tool(name: str, arguments: dict, tool: Tool) -> str:
     )
     return response.choices[0].message.content
 
-def process_problem_solving_tool(name: str, arguments: dict) -> str:
-    pass
+def process_problem_solving_tool(name: str, arguments: dict, tool: Tool) -> str:
+    return "Problem solving output"
+
+def process_conversation_tool(name: str, arguments: dict, tool: Tool) -> str:
+    if name == "set_conv_history":
+        conversation_server.set_conversation_history(arguments["conversation"])
+        return "Conversation history set"
+    system_prompt, user_prompt = build_conversation_prompts(name, arguments, tool)
+    response = client.chat.completions.create(
+        model=os.getenv("MODEL_NAME"),
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+    )
+    return response.choices[0].message.content
 
 # Tool Execution
 def execute_tool(name: str, arguments: dict) -> str:
-    all_tools, meta_thinking_names_dict, problem_solving_names_dict = get_all_tools()
+    all_tools, meta_thinking_names_dict, problem_solving_names_dict, conversation_names_dict = get_all_tools()
     if name in meta_thinking_names_dict:
         return process_meta_thinking_tool(name, arguments, meta_thinking_names_dict[name])
+    elif name in problem_solving_names_dict:
+        return process_problem_solving_tool(name, arguments, problem_solving_names_dict[name])
+    elif name in conversation_names_dict:
+        return process_conversation_tool(name, arguments, conversation_names_dict[name])
     return "To be implemented"
 
 if __name__ == "__main__":

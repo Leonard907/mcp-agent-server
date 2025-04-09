@@ -40,4 +40,3 @@ Parameters:
 - read_history: boolean. Whether to read the history of the conversation. If true, the tool will automatically read the conversation history as input.
 - solution: string. Current solution if read_history is false.
 Required: read_history
-
