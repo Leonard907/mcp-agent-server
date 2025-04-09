@@ -1,3 +1,4 @@
+import json
 from typing import Sequence
 from mcp_agent_server.utils import *
 
@@ -15,12 +16,12 @@ async def serve() -> None:
 
     @server.call_tool()
     async def call_tool(
-        name: str, arguments: dict
+        name: str, arguments: str
     ) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
         """Handle tool calls for time queries and conversation history."""
         result = ""
         try:
-            result = execute_tool(name, arguments)
+            result = execute_tool(name, json.loads(arguments))
 
             return [
                 TextContent(type="text", text=result)
