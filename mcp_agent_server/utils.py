@@ -18,10 +18,12 @@ class ConversationTools(Enum):
 # Handling General Tool Calling using LLMs
 def parse_tools(file_path: str = "data/meta_thinking.md") -> List[Tool]:
     try:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(current_dir, file_path)
         with open(file_path, 'r') as file:
             content = file.read()
     except FileNotFoundError:
-        raise FileNotFoundError(f"Meta thinking file not found at: {file_path}")
+        raise FileNotFoundError(f"Meta thinking file not found at: {file_path}. Current directory: {current_dir}")
     
     # Split content by tool definitions (each starts with "Name:")
     tool_sections = re.split(r'(?=Name:)', content)
