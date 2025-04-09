@@ -38,5 +38,8 @@ def build_conversation_prompts(name: str, arguments: dict, tool: Tool) -> str:
         system_prompt = load_system_prompt(task_description=tool.description, read_history=True, need_background=False)
         level = arguments.get("level", "normal")
         conversation_history = arguments.get("conversation_history", "")
+        instruction = arguments.get("instruction", "")
         user_prompt = f"Produce a {level} summary of the following conversation:\n\n{conversation_history}"
+        if instruction:
+            user_prompt += f"\n\nFocus on the following aspect when producing the summary: {instruction}"
     return system_prompt, user_prompt
