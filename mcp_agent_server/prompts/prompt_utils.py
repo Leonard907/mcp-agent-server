@@ -6,7 +6,7 @@ import os
 # Getting the System Prompt Template
 def load_system_prompt(**kwargs) -> str:
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    env = Environment(loader=FileSystemLoader(os.path.join(current_dir, "prompts")))
+    env = Environment(loader=FileSystemLoader(os.path.join(current_dir)))
     template = env.get_template("meta_thinking_system.jinja")
     return template.render(**kwargs)
 
