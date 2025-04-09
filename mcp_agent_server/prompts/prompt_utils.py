@@ -1,10 +1,12 @@
 from jinja2 import Environment, FileSystemLoader
 from mcp.types import Tool
 from mcp_agent_server.conversation import conversation_server
+import os
 
 # Getting the System Prompt Template
 def load_system_prompt(**kwargs) -> str:
-    env = Environment(loader=FileSystemLoader("prompts"))
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    env = Environment(loader=FileSystemLoader(os.path.join(current_dir, "prompts")))
     template = env.get_template("meta_thinking_system.jinja")
     return template.render(**kwargs)
 
