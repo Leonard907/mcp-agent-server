@@ -110,9 +110,9 @@ def get_all_tools() -> Tuple[List[Tool], Dict[str, Tool], Dict[str, Tool], Dict[
     problem_solving_names_dict = {tool.name: tool for tool in problem_solving_tools}
     conversation_names_dict = {tool.name: tool for tool in conversation_tools}
 
-    all_tools = meta_thinking_tools + problem_solving_tools + [
-        tool for tool in conversation_tools if tool.name != "set_conv_history"
-    ]
+    conversation_tools = [tool for tool in conversation_tools if tool.name != "set_conv_history"]
+
+    all_tools = meta_thinking_tools + problem_solving_tools + conversation_tools
 
     return (
         conversation_tools,
