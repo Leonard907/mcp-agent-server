@@ -33,12 +33,10 @@ def build_meta_thinking_prompts(name: str, arguments: dict, tool: Tool) -> str:
     return system_prompt, user_prompt
 
 def build_conversation_prompts(name: str, arguments: dict, tool: Tool) -> str:
-    # Build the system prompt
-    system_prompt = load_system_prompt(task_description=tool.description, read_history=False, problem_background=conversation_server.get_question())
-    
-    # Build the user prompt
     user_prompt = ""
     if name == "summarize":
+        system_prompt = load_system_prompt(task_description=tool.description, read_history=True, need_background=False)
         level = arguments.get("level", "normal")
-        user_prompt = f"Produce a {level} summary of the following conversation:\n\n{conversation_server.get_conversation_history()}"
+        conversation_history = arguments.get("conversation_history", "")
+        user_prompt = f"Produce a {level} summary of the following conversation:\n\n{conversation_history}"
     return system_prompt, user_prompt

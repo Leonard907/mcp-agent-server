@@ -4,7 +4,7 @@ You are an agent that only performs one task: {{ task_description }}.
 You will be given the conversation history between the user and other assistants. Perform your task based on the conversation history.
 {% endif %}
 
-{% if not read_history %}
+{% if not read_history and need_background %}
 Read the problem background to understand the task. The user will provide information to help you perform your task.
 
 Problem Background:
