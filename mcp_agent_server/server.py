@@ -16,12 +16,12 @@ async def serve() -> None:
 
     @server.call_tool()
     async def call_tool(
-        name: str, arguments: str
+        name: str, arguments: dict
     ) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
         """Handle tool calls for time queries and conversation history."""
         result = ""
         try:
-            result = execute_tool(name, json.loads(arguments))
+            result = execute_tool(name, arguments)
 
             return [
                 TextContent(type="text", text=result)
