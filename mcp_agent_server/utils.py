@@ -1,19 +1,17 @@
 import re
 from typing import List, Dict, Any, Tuple
-from enum import Enum
 from mcp.types import Tool
 from openai import OpenAI
-from mcp_agent_server.prompts.prompt_utils import build_meta_thinking_prompts, build_conversation_prompts
-from mcp_agent_server.conversation import conversation_server
 import os
 from dotenv import load_dotenv
+from prompts.prompt_utils import load_system_prompt, load_user_prompt
 
 load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url=os.getenv("OPENAI_API_BASE"))
 
 # Handling General Tool Calling using LLMs
-def parse_tools(file_path: str = "data/meta_thinking.md") -> List[Tool]:
+def parse_tools(file_path: str = "data/tools.md") -> List[Tool]:
     try:
         # Handle absolute paths
         if os.path.isabs(file_path):
@@ -102,69 +100,40 @@ def parse_tools(file_path: str = "data/meta_thinking.md") -> List[Tool]:
     return tools
 
 def get_all_tools() -> Tuple[List[Tool], Dict[str, Tool], Dict[str, Tool], Dict[str, Tool]]:
-    meta_thinking_tools = parse_tools(file_path="data/meta_thinking.md")
-    problem_solving_tools = parse_tools(file_path="data/problem_solving.md") 
-    conversation_tools = parse_tools(file_path="data/conversation_tools.md")
+    tools = parse_tools()
     
-    meta_thinking_names_dict = {tool.name: tool for tool in meta_thinking_tools}
-    problem_solving_names_dict = {tool.name: tool for tool in problem_solving_tools}
-    conversation_names_dict = {tool.name: tool for tool in conversation_tools}
-
-    conversation_tools = [tool for tool in conversation_tools if tool.name != "set_conv_history"]
-
-    all_tools = meta_thinking_tools + problem_solving_tools + conversation_tools
-
-    return (
-        conversation_tools,
-        meta_thinking_names_dict,
-        problem_solving_names_dict,
-        conversation_names_dict
-    )
-
-def process_meta_thinking_tool(name: str, arguments: dict, tool: Tool) -> str:
-    system_prompt, user_prompt = build_meta_thinking_prompts(arguments, tool)
-    response = client.chat.completions.create(
-        model=os.getenv("MODEL_NAME"),
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ]
-    )
-    return response.choices[0].message.content
-
-def process_problem_solving_tool(name: str, arguments: dict, tool: Tool) -> str:
-    return "Problem solving output"
-
-def process_conversation_tool(name: str, arguments: dict, tool: Tool) -> str:
-    if name == "set_conv_history":
-        conversation_server.set_conversation_history(arguments["conversation"])
-        return "Conversation history set"
-    system_prompt, user_prompt = build_conversation_prompts(name, arguments, tool)
-    response = client.chat.completions.create(
-        model=os.getenv("MODEL_NAME"),
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ]
-    )
-    return response.choices[0].message.content
+    names_dict = {tool.name: tool for tool in tools}
+    return tools, names_dict
 
 # Tool Execution
 def execute_tool(name: str, arguments: dict) -> str:
-    all_tools, meta_thinking_names_dict, problem_solving_names_dict, conversation_names_dict = get_all_tools()
-    if name in meta_thinking_names_dict:
-        return process_meta_thinking_tool(name, arguments, meta_thinking_names_dict[name])
-    elif name in problem_solving_names_dict:
-        return process_problem_solving_tool(name, arguments, problem_solving_names_dict[name])
-    elif name in conversation_names_dict:
-        return process_conversation_tool(name, arguments, conversation_names_dict[name])
-    return "To be implemented"
+    conv_history = arguments.get("conversation_history", "")
+    if conv_history:
+        del arguments["conversation_history"]
 
-if __name__ == "__main__":
-    # Test the function
-    tools = parse_tools()
-    for tool in tools:
-        print(f"Tool: {tool.name}")
-        print(f"Description: {tool.description}")
-        print(f"Schema: {tool.inputSchema}")
-        print("---")
+    all_tools, names_dict = get_all_tools()
+    target_tool = names_dict.get(name)
+    if not target_tool:
+        return f"Tool {name} not found"
+    
+    parameters_desc_string = "\n".join(
+        [f"- {k}: {v["description"]}" for k,v in target_tool.inputSchema["properties"].items()]
+    )
+
+    parameters_string = "\n".join(
+        [f"- {k}: {v}" for k,v in arguments.items()]
+    )
+
+    system_prompt = load_system_prompt(task_description=target_tool.description, task_parameters=parameters_desc_string)
+    user_prompt = load_user_prompt(task_description=target_tool.description, task_parameters=parameters_string)
+
+    response = client.chat.completions.create(
+        model=os.getenv("MODEL_NAME"),
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        max_tokens=1024,
+    )
+
+    return response.choices[0].message.content

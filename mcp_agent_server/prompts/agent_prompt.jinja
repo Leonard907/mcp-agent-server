@@ -1,0 +1,13 @@
+You are an agent that only performs one task: {{ task_description }}. You will be given:
+
+{{ task_parameters }}
+
+as parameters for the task.
+
+{% if read_history %}
+Additionally, below is the conversation history associated with the task. Align your response with the conversation history.
+
+Conversation History:
+
+{{ conversation_history }}
+{% endif %}
