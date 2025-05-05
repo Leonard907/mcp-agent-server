@@ -117,7 +117,7 @@ def execute_tool(name: str, arguments: dict) -> str:
         return f"Tool {name} not found"
     
     parameters_desc_string = "\n".join(
-        [f"- {k}: {v["description"]}" for k,v in target_tool.inputSchema["properties"].items()]
+        [f"- {k}: {v['description']}" for k,v in target_tool.inputSchema["properties"].items()]
     )
 
     parameters_string = "\n".join(
