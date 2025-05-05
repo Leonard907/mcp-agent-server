@@ -4,7 +4,7 @@ from mcp.types import Tool
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
-from prompts.prompt_utils import load_system_prompt, load_user_prompt
+from mcp_agent_server.prompts.prompt_utils import load_system_prompt, load_user_prompt
 
 load_dotenv()
 
