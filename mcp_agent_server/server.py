@@ -11,7 +11,7 @@ async def serve() -> None:
 
     @server.list_tools()
     async def list_tools() -> list[Tool]:
-        tools, _, _, _ = get_all_tools()
+        tools, _ = get_all_tools()
         return tools
 
     @server.call_tool()
